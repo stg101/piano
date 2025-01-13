@@ -11,6 +11,12 @@ require "./component.rb"
 # repetition: playable + 'x' + number
 # playable: note | chord | sequence | repetition
 
+# class NoteValue
+#   def initialize(note_value)
+
+#   end
+# end
+
 class Expr
   def build
     raise NotImplementedError
@@ -25,8 +31,8 @@ class PitchExpr < Expr
     @octave = octave
   end
 
-  def build
-    NoteComponent.new(to_s, 1.0)
+  def build(default_duration = 0.25)
+    NoteComponent.new(to_s, default_duration)
   end
 
   def to_s
@@ -34,29 +40,53 @@ class PitchExpr < Expr
   end
 end
 
-class NoteExpr < Expr
-  attr_reader :pitch, :duration
+# 4...
+class DurationExpr < Expr
+  attr_accessor :base, :dot_extensions
 
-  def initialize(pitch, duration)
-    @pitch = pitch
-    @duration = duration
+  def initialize(denominator, dot_extensions = 0)
+    @base = 1.0 / denominator
+    @dot_extensions = dot_extensions
   end
 
-  def build
-    NoteComponent.new(pitch, 4.0 / duration.to_i)
+  def dot_extend
+    @dot_extensions += 1
+  end
+
+  def duration
+    base * (2 - 1.0 / (2 ** dot_extensions))
+  end
+end
+
+class NoteExpr < Expr
+  attr_reader :pitch, :duration_expr
+
+  def initialize(pitch, duration_expr)
+    @pitch = pitch
+    @duration_expr = duration_expr
+  end
+
+  def build(default_duration)
+    duration = duration_expr ? duration_expr.duration : default_duration
+    NoteComponent.new(pitch, duration)
   end
 end
 
 class ChordExpr < Expr
-  attr_accessor :children, :duration
+  attr_accessor :children, :duration_expr
 
-  def initialize(children, duration = 4)
+  def initialize(children, duration_expr)
     @children = children
-    @duration = duration
+    @duration_expr = duration_expr
   end
 
   def build
-    ChordComponent.new(children.map(&:build), 4.0 / duration.to_i)
+    notes = children.map { |note_expr| note_expr.build(0.25) }
+    ChordComponent.new(notes)
+  end
+
+  def duration
+    4.0 / duration_expr
   end
 end
 
@@ -147,10 +177,12 @@ class Interpreter
         last_expr = stack.last
         if last_expr.is_a?(PitchExpr)
           stack.pop
-          stack << NoteExpr.new(last_expr.to_s, token.value.to_i)
+          duration = DurationExpr.new(token.value.to_f)
+          stack << NoteExpr.new(last_expr.to_s, duration)
         elsif last_expr.is_a?(ChordExpr)
           stack.pop
-          stack << ChordExpr.new(last_expr.children, token.value)
+          duration = DurationExpr.new(token.value.to_f)
+          stack << ChordExpr.new(last_expr.children, duration)
         elsif last_expr.is_a?(CrossToken) && stack[-2].is_a?(Expr)
           raise "Not enough args for repetition" if stack.length <= 1
           stack.pop

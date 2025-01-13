@@ -61,40 +61,32 @@ class RepeatComponent < UnaryComponent
 end
 
 class NoteComponent < LeafComponent
-  attr_reader :ratio, :note
+  attr_reader :duration, :note
 
-  def initialize(note, ratio)
+  def initialize(note, duration)
     @note = note
-    @ratio = ratio
+    @duration = duration
   end
 
   def play
-    PlayerService.instance.play(note, ratio)
-  end
-
-  def clone
-    NoteComponent.new(note, ratio)
+    PlayerService.instance.play(note, duration)
   end
 end
 
-class ChordComponent < LeafComponent
-  attr_reader :notes, :ratio
+class ChordComponent < NaryComponent
+  attr_reader :notes
 
-  def initialize(notes, ratio)
+  def initialize(notes)
     @notes = notes
-    @ratio = ratio
   end
 
   # if you are passing notes, you need to tranform to s
   def play
 
-    _notes = notes.map do |note|
-      _note = note.dup
-
-
-    end
-
-    PlayerService.instance.play_chord(_notes, ratio)
+    # _notes = notes.map do |note|
+    #   _note = note.dup
+    # end
+    # PlayerService.instance.play_chord(_notes, duration)
   end
 end
 
@@ -144,7 +136,6 @@ end
 # composite = SequenceComponent.new([
 #   NoteComponent.new("C4", 2),
 
-
 #   # NoteComponent.new("C4", 2),
 #   # NoteComponent.new("D4", 2),
 #   # NoteComponent.new("E4", 2),
@@ -164,7 +155,6 @@ end
 #   # NoteComponent.new("B5", 2),
 
 #   # NoteComponent.new("pause", 1),
-
 
 #   # NoteComponent.new("C6", 2),
 #   # NoteComponent.new("D6", 2),
@@ -193,7 +183,6 @@ end
 #   # NoteComponent.new("G8", 2),
 #   # NoteComponent.new("A8", 2),
 #   # NoteComponent.new("B8", 2),
-
 
 # ])
 

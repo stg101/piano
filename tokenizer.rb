@@ -62,6 +62,14 @@ class QuoteGroupToken < Token
   end
 end
 
+class DotGroupToken < Token
+  attr_reader :value
+
+  def initialize(value = 1)
+    @value = value
+  end
+end
+
 class Tokenizer
   def tokenize(text)
     stack = []
@@ -83,6 +91,13 @@ class Tokenizer
           stack << QuoteGroupToken.new(last_token.value + 1)
         else
           stack << QuoteGroupToken.new
+        end
+      when "."
+        if stack.last.is_a?(DotGroupToken)
+          last_token = stack.pop
+          stack << DotGroupToken.new(last_token.value + 1)
+        else
+          stack << DotGroupToken.new
         end
       when "x"
         stack << CrossToken.new
