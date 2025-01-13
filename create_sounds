@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Frequencies for a C Major scale
+note_names=("C4" "D4" "E4" "F4" "G4" "A4" "B4" "C5")
+
+for note in "${note_names[@]}"; do
+  echo "Generating note: $note"
+  
+  # sox -n "piano_${note}_0.5.wav" synth 0.5 pluck $note vol 0.5 rate 8k
+  # sox -n "piano_${note}_1.0.wav" synth 1.0 pluck $note vol 0.5 rate 8k
+  # sox -n "piano_${note}_1.5.wav" synth 1.5 pluck $note vol 0.5 rate 8k
+  # sox -n "piano_${note}_10.0.wav" synth 10.0 sine $note vol 0.5 rate 8k
+  sox -n "piano_${note}_10.0.wav" synth 10.0 square $note vol 0.25 rate 8k
+
+
+done
+
+echo "8-bit piano notes created."
