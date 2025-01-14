@@ -1,5 +1,45 @@
 require "./player_service.rb"
 
+class Duration
+  attr_reader :denominator, :extensions
+
+  def initialize(denominator = 4, extensions = 0)
+    @denominator = denominator
+    @extensions = extensions
+  end
+
+  def add_extension
+    @extensions += 1
+  end
+
+  def in_beats
+    (Options.instance.whole_note_beats.to_f / denominator) * extension_factor
+  end
+
+  def in_seconds
+    in_beats * 60.0 / Options.instance.bpm
+  end
+
+  private
+
+  def extension_factor
+    (2 - 1.0 / (2 ** extensions))
+  end
+end
+
+class Pitch
+  attr_reader :tone, :octave
+
+  def initialize(tone, octave = 4)
+    @tone = tone
+    @octave = octave
+  end
+
+  def to_s
+    "#{tone.upcase}#{octave}"
+  end
+end
+
 class AudioComponent
   def first
     children.first
@@ -22,16 +62,7 @@ class AudioComponent
   end
 end
 
-class LeafComponent < AudioComponent
-end
-
-class NaryComponent < AudioComponent
-end
-
-class UnaryComponent < AudioComponent
-end
-
-class SequenceComponent < NaryComponent
+class SequenceComponent < AudioComponent
   attr_reader :children
 
   def initialize(components)
@@ -45,7 +76,7 @@ class SequenceComponent < NaryComponent
   end
 end
 
-class RepeatComponent < UnaryComponent
+class RepeatComponent < AudioComponent
   attr_reader :children, :count
 
   def initialize(component, count)
@@ -60,20 +91,22 @@ class RepeatComponent < UnaryComponent
   end
 end
 
-class NoteComponent < LeafComponent
-  attr_reader :duration, :note
+class NoteComponent < AudioComponent
+  attr_reader :duration, :pitch
 
-  def initialize(note, duration)
-    @note = note
+  def initialize(pitch, duration)
+    @pitch = pitch
     @duration = duration
   end
 
   def play
-    PlayerService.instance.play(note, duration)
+    PlayerService.instance.play_note(self)
   end
 end
 
-class ChordComponent < NaryComponent
+# falta un sleep component
+
+class ChordComponent < AudioComponent
   attr_reader :notes
 
   def initialize(notes)
@@ -82,166 +115,6 @@ class ChordComponent < NaryComponent
 
   # if you are passing notes, you need to tranform to s
   def play
-
-    # _notes = notes.map do |note|
-    #   _note = note.dup
-    # end
-    # PlayerService.instance.play_chord(_notes, duration)
+    PlayerService.instance.play_chord(self)
   end
 end
-
-# composite = SequenceComponent.new([
-#   RepeatComponent.new(
-#     SequenceComponent.new([
-#       NoteComponent.new("C4", 1),
-#       NoteComponent.new("D4", 0.5),
-#     ]), 3
-#   ),
-# ])
-# composite.play
-
-# composite = SequenceComponent.new([
-#   NoteComponent.new("C1", 2),
-#   NoteComponent.new("C2", 2),
-#   NoteComponent.new("C3", 2),
-#   NoteComponent.new("C4", 2),
-#   NoteComponent.new("C5", 2),
-#   NoteComponent.new("C6", 2),
-#   NoteComponent.new("C7", 2),
-#   NoteComponent.new("C8", 2),
-# ])
-
-# composite = SequenceComponent.new([
-#   NoteComponent.new("F1", 2),
-#   NoteComponent.new("F2", 2),
-#   NoteComponent.new("F3", 2),
-#   NoteComponent.new("F4", 2),
-#   NoteComponent.new("F5", 2),
-#   NoteComponent.new("F6", 2),
-#   NoteComponent.new("F7", 2),
-#   NoteComponent.new("F8", 2),
-# ])
-
-# composite = SequenceComponent.new([
-#   NoteComponent.new("A1", 2),
-#   NoteComponent.new("A2", 2),
-#   NoteComponent.new("A3", 2),
-#   NoteComponent.new("A4", 2),
-#   NoteComponent.new("A5", 2),
-#   NoteComponent.new("A6", 2),
-#   NoteComponent.new("A7", 2),
-#   NoteComponent.new("A8", 2),
-# # ])
-
-# composite = SequenceComponent.new([
-#   NoteComponent.new("C4", 2),
-
-#   # NoteComponent.new("C4", 2),
-#   # NoteComponent.new("D4", 2),
-#   # NoteComponent.new("E4", 2),
-#   # NoteComponent.new("F4", 2),
-#   # NoteComponent.new("G4", 2),
-#   # NoteComponent.new("A4", 2),
-#   # NoteComponent.new("B4", 2),
-
-#   # NoteComponent.new("pause", 1),
-
-#   # NoteComponent.new("C5", 2),
-#   # NoteComponent.new("D5", 2),
-#   # NoteComponent.new("E5", 2),
-#   # NoteComponent.new("F5", 2),
-#   # NoteComponent.new("G5", 2),
-#   # NoteComponent.new("A5", 2),
-#   # NoteComponent.new("B5", 2),
-
-#   # NoteComponent.new("pause", 1),
-
-#   # NoteComponent.new("C6", 2),
-#   # NoteComponent.new("D6", 2),
-#   # NoteComponent.new("E6", 2),
-#   # NoteComponent.new("F6", 2),
-#   # NoteComponent.new("G6", 2),
-#   # NoteComponent.new("A6", 2),
-#   # NoteComponent.new("B6", 2),
-
-#   # NoteComponent.new("pause", 1),
-
-#   # NoteComponent.new("C7", 2),
-#   # NoteComponent.new("D7", 2),
-#   # NoteComponent.new("E7", 2),
-#   # NoteComponent.new("F7", 2),
-#   # NoteComponent.new("G7", 2),
-#   # NoteComponent.new("A7", 2),
-#   # NoteComponent.new("B7", 2),
-
-#   # NoteComponent.new("pause", 1),
-
-#   # NoteComponent.new("C8", 2),
-#   # NoteComponent.new("D8", 2),
-#   # NoteComponent.new("E8", 2),
-#   # NoteComponent.new("F8", 2),
-#   # NoteComponent.new("G8", 2),
-#   # NoteComponent.new("A8", 2),
-#   # NoteComponent.new("B8", 2),
-
-# ])
-
-# # composite = SequenceComponent.new([
-# #   NoteComponent.new("C7", 2),
-# #   NoteComponent.new("D7", 2),
-# #   NoteComponent.new("E7", 2),
-# #   NoteComponent.new("F7", 2),
-# #   NoteComponent.new("G7", 2),
-# #   NoteComponent.new("A7", 2),
-# #   NoteComponent.new("B7", 2),
-# # ])
-
-# # composite = SequenceComponent.new([
-# #   NoteComponent.new("C8", 2),
-
-# #   NoteComponent.new("D8", 2),
-
-# #   NoteComponent.new("E8", 2),
-
-# #   NoteComponent.new("F8", 2),
-
-# #   NoteComponent.new("G8", 2),
-
-# #   NoteComponent.new("A8", 2),
-
-# #   NoteComponent.new("B8", 2),
-# # ])
-
-# # composite = SequenceComponent.new([
-# #   NoteComponent.new("C6", 0.5),
-# #   NoteComponent.new("C4", 0.5),
-# #   NoteComponent.new("C3", 0.5),
-# #   NoteComponent.new("pause", 0.5),
-
-# #   NoteComponent.new("D6", 0.5),
-# #   NoteComponent.new("D4", 0.5),
-# #   NoteComponent.new("D3", 0.5),
-# #   NoteComponent.new("pause", 0.5),
-
-# #   NoteComponent.new("E6", 0.5),
-# #   NoteComponent.new("E4", 0.5),
-# #   NoteComponent.new("E3", 0.5),
-# #   NoteComponent.new("pause", 0.5),
-
-# # ])
-
-# composite.play
-
-# # composite = SequenceComponent.new([
-# #   NoteComponent.new("C8", 2),
-# #   NoteComponent.new("D8", 2),
-# #   NoteComponent.new("E8", 2),
-# #   NoteComponent.new("F8", 2),
-# #   NoteComponent.new("G8", 2),
-# #   NoteComponent.new("A8", 2),
-# #   NoteComponent.new("B8", 2),
-
-# # ])
-
-# #maybe we can add another note component, wich is a composite because it can be play
-# # a a cord maybe instead of note a playable composite

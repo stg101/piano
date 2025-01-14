@@ -54,6 +54,12 @@ class CrossToken < Token
   end
 end
 
+class SpaceToken < Token
+  def value
+    " "
+  end
+end
+
 class QuoteGroupToken < Token
   attr_reader :value
 
@@ -110,7 +116,7 @@ class Tokenizer
       when ")"
         stack << CloseParenthesisToken.new
       when /\s/
-        next
+        stack << SpaceToken.new
       else
         raise "Unknown character: #{char}"
       end

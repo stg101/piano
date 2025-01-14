@@ -1,25 +1,42 @@
 require "singleton"
+require "./options.rb"
 
 class PlayerService
   include Singleton
 
   def initialize
-    @bpm = 60
     blank(0.5)
   end
 
-  def beat_duration(ratio)
-    ratio * 60.0 / @bpm
+  def play_note(note)
+    system(build_note_command(note))
   end
 
-  def build_play_command(frequency, duration)
-    fade_duration = 0.01
-    "ffmpeg -f lavfi -i sine=frequency=#{frequency}:duration=#{duration} -af 'afade=t=in:st=0:d=#{fade_duration}, afade=t=out:st=#{duration - fade_duration}:d=#{fade_duration}' -f alsa default"
+  def play_chord(chord)
+    system(build_chord_command(chord.notes))
   end
 
-  def build_parallel_play_command(frequencies, duration)
-    commands = frequencies.map { |f| "\"#{build_play_command(f, duration)}\"" }.join(" ")
+  def blank(duration)
+    system(ffmpeg_sound_command(0, duration))
+  end
+
+  private
+
+  def build_note_command(note)
+    seconds = note.duration.in_seconds
+    frequency = note_to_frequency(note.pitch.to_s)
+    ffmpeg_sound_command(frequency, seconds)
+  end
+
+  def build_chord_command(notes)
+    commands = notes.map { |note| "\"#{build_note_command(note)}\"" }.join(" ")
     "parallel ::: #{commands}"
+  end
+
+  def ffmpeg_sound_command(frequency, seconds)
+    puts "Playing note #{frequency} for #{seconds} seconds"
+    fade_seconds = 0.01
+    "ffmpeg -f lavfi -i sine=frequency=#{frequency}:duration=#{seconds} -af 'afade=t=in:st=0:d=#{fade_seconds}, afade=t=out:st=#{seconds - fade_seconds}:d=#{fade_seconds}' -f alsa default"
   end
 
   def note_to_frequency(note)
@@ -62,26 +79,5 @@ class PlayerService
     }
 
     frequencies[note] || 440.00  # Default to A4 if note is not found
-  end
-
-  def play(note, ratio = 0.5)
-    duration = beat_duration(ratio)
-
-    return sleep(duration) if note == "pause"
-
-    frequency = note_to_frequency(note)
-
-    system(build_play_command(frequency, duration))
-  end
-
-  def play_chord(notes)
-    duration = beat_duration(ratio)
-    frequencies = notes.map { |note| note_to_frequency(note) }
-
-    system(build_parallel_play_command(frequencies, duration))
-  end
-
-  def blank(duration)
-    system(build_play_command(0, duration))
   end
 end

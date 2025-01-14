@@ -1,92 +1,59 @@
 require "./tokenizer.rb"
 require "./component.rb"
 
-# pitch: 'c'| 'd' | ... | 'b' + (' '' ''' , ,, ,,,)?
-# duration: 1 | 2 | 4 | 8 | 16
-# note: pitch + duration
-# duration_altered_chord: '<' + note* + '>'
-# standard_chord: '<' + pitch* + '>' + duration
-# chord: standard_chord | duration_altered_chord
-# sequence: '(' + playable* + ')'
-# repetition: playable + 'x' + number
-# playable: note | chord | sequence | repetition
-
-# class NoteValue
-#   def initialize(note_value)
-
-#   end
-# end
-
 class Expr
   def build
     raise NotImplementedError
   end
 end
 
-class PitchExpr < Expr
-  attr_reader :tone, :octave
-
-  def initialize(tone, octave = 4)
-    @tone = tone
-    @octave = octave
-  end
-
-  def build(default_duration = 0.25)
-    NoteComponent.new(to_s, default_duration)
-  end
-
-  def to_s
-    "#{tone.upcase}#{octave}"
+class SoundModifierExpr < Expr
+  def initialize()
   end
 end
 
-# 4...
-class DurationExpr < Expr
-  attr_accessor :base, :dot_extensions
-
-  def initialize(denominator, dot_extensions = 0)
-    @base = 1.0 / denominator
-    @dot_extensions = dot_extensions
-  end
-
-  def dot_extend
-    @dot_extensions += 1
-  end
-
+class SoundExpr < Expr
   def duration
-    base * (2 - 1.0 / (2 ** dot_extensions))
+    raise NotImplementedError
   end
 end
 
-class NoteExpr < Expr
-  attr_reader :pitch, :duration_expr
+class PitchExpr < SoundExpr
+  attr_accessor :pitch
 
-  def initialize(pitch, duration_expr)
+  def initialize(pitch)
     @pitch = pitch
-    @duration_expr = duration_expr
   end
 
-  def build(default_duration)
-    duration = duration_expr ? duration_expr.duration : default_duration
-    NoteComponent.new(pitch, duration)
+  def build(default_duration = Duration.new)
+    NoteComponent.new(pitch, default_duration)
   end
 end
 
-class ChordExpr < Expr
-  attr_accessor :children, :duration_expr
+class NoteExpr < SoundExpr
+  attr_accessor :pitch, :duration
 
-  def initialize(children, duration_expr)
+  def initialize(pitch, duration = nil)
+    @pitch = pitch
+    @duration = duration
+  end
+
+  def build(default_duration = Duration.new)
+    NoteComponent.new(pitch, duration || default_duration || Duration.new)
+  end
+end
+
+class ChordExpr < SoundExpr
+  attr_accessor :children, :duration
+
+  def initialize(children, duration = nil)
     @children = children
-    @duration_expr = duration_expr
+    @duration = duration
   end
 
   def build
-    notes = children.map { |note_expr| note_expr.build(0.25) }
+    notes = children.map { |note_expr| note_expr.build(duration) }
     ChordComponent.new(notes)
-  end
-
-  def duration
-    4.0 / duration_expr
   end
 end
 
@@ -136,14 +103,15 @@ class Interpreter
            OpenParenthesisToken
         stack << token
       when PitchToken
-        stack << PitchExpr.new(token.value)
+        stack << PitchExpr.new(Pitch.new(token.value))
       when QuoteGroupToken
         if stack.last.is_a?(PitchExpr)
           last_expr = stack.pop
-          stack << PitchExpr.new(
-            last_expr.tone,
-            last_expr.octave + token.value
-          )
+          last_pitch = last_expr.pitch
+          stack << PitchExpr.new(Pitch.new(
+            last_pitch.tone,
+            last_pitch.octave + token.value
+          ))
         else
           raise "QuoteGroup should be after a pitch"
         end
@@ -177,12 +145,10 @@ class Interpreter
         last_expr = stack.last
         if last_expr.is_a?(PitchExpr)
           stack.pop
-          duration = DurationExpr.new(token.value.to_f)
-          stack << NoteExpr.new(last_expr.to_s, duration)
+          duration = Duration.new(token.value.to_f)
+          stack << NoteExpr.new(last_expr.pitch, duration)
         elsif last_expr.is_a?(ChordExpr)
-          stack.pop
-          duration = DurationExpr.new(token.value.to_f)
-          stack << ChordExpr.new(last_expr.children, duration)
+          stack.last.duration = Duration.new(token.value.to_f)
         elsif last_expr.is_a?(CrossToken) && stack[-2].is_a?(Expr)
           raise "Not enough args for repetition" if stack.length <= 1
           stack.pop
@@ -196,13 +162,15 @@ class Interpreter
   end
 end
 
-interpreter = Interpreter.new
-# parsed = interpreter.interpret("(<c d>2 c'x20 c'')")
-parsed = interpreter.interpret("(<c2 d4>)")
+# interpreter = Interpreter.new
+# # parsed = interpreter.interpret("(<c d4>2 c'x20 c'')")
+# parsed = interpreter.interpret("(<c a4>2 c'20x4 c'')")
 
-pp parsed
-composite = parsed.build
-pp(composite)
+# # parsed = interpreter.interpret("(<c2 d4>)")
 
-composite.play
-# test irregular chord
+# pp parsed
+# composite = parsed.build
+# pp(composite)
+
+# composite.play
+# # test irregular chord
