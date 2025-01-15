@@ -15,17 +15,25 @@ class Server
   end
 
   def run
-    begin
-      AcceptHandler.new(Addrinfo.tcp("127.0.0.1", 3000), reactor)
+    AcceptHandler.new(Addrinfo.tcp("127.0.0.1", 3000), reactor)
 
-      while true
-        reactor.handle_events
-      end
-    rescue Exception => e
-      puts "Exception: #{e}"
-      close
+    while true
+      reactor.handle_events
     end
   end
+
+  # def run
+  #   begin
+  #     AcceptHandler.new(Addrinfo.tcp("127.0.0.1", 3000), reactor)
+
+  #     while true
+  #       reactor.handle_events
+  #     end
+  #   rescue Exception => e
+  #     close
+  #     raise e
+  #   end
+  # end
 
   def close
     reactor.close_handlers

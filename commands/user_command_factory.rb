@@ -15,7 +15,7 @@ class UserCommandFactory
     when "expr"
       make_expr_command(args_str)
     when "play"
-      make_eval_command
+      make_play_command
     when "print"
       make_print_command
     when "save"
@@ -33,7 +33,7 @@ class UserCommandFactory
     end
   end
 
-  def make_expr_command
+  def make_expr_command(args_str)
     ExprCommand.new(audio_tree, args_str)
   end
 

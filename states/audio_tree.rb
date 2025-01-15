@@ -1,7 +1,7 @@
 require_relative "../interpreter/interpreter"
 
 class AudioTree
-  attr_reader :state, :component_tree
+  attr_accessor :state, :component_tree
 
   def initialize
     @state = UninitializedState.new(self)
