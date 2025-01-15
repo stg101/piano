@@ -1,5 +1,5 @@
-require "./tokenizer.rb"
-require "./component.rb"
+require_relative "tokenizer"
+require_relative "../component"
 
 class Expr
   def build

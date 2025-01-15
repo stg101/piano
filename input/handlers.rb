@@ -1,3 +1,6 @@
+require_relative "../states/audio_tree"
+require_relative "../commands/user_command_factory"
+
 module EventType
   READ_EVENT = 0x01
   ACCEPT_EVENT = 0x01
@@ -34,7 +37,7 @@ class AcceptHandler < Handler
   def handle_event(handle, event_type)
     client_socket_info = socket.accept
 
-    ReadHandler.new(client_socket_info, Reactor.instance)
+    PianoHandler.new(client_socket_info, Reactor.instance)
   end
 
   def get_handle
@@ -55,11 +58,15 @@ end
 
 # reproductor remoto
 # i will need  a queue of plays
-class ReadHandler < Handler
+# the original code uses a template pattern to abstract succind and verbose mode
+class PianoHandler < Handler
   def initialize(socket_info, reactor)
     ## is this actually isolating the connection side from the application side ??
     @socket = socket_info[0]
     @peer_addr = socket_info[1]
+
+    @audio_tree = AudioTree.new
+    @command_factory = UserCommandFactory.new(@audio_tree)
     puts "Accepted connection to #{peer_addr.ip_address}:#{peer_addr.ip_port}"
 
     reactor.register_handler(self, EventType::READ_EVENT | EventType::CLOSE_EVENT)
@@ -77,6 +84,9 @@ class ReadHandler < Handler
 
     payload_body = payload[0]
     puts "payload: #{payload_body}"
+
+    command = command_factory.make_command(payload_body)
+    command.execute
   end
 
   def get_handle
@@ -91,5 +101,5 @@ class ReadHandler < Handler
 
   private
 
-  attr_accessor :socket, :peer_addr
+  attr_accessor :socket, :peer_addr, :audio_tree, :command_factory
 end
