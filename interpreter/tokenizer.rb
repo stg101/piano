@@ -1,3 +1,5 @@
+require_relative "../errors"
+
 class Token
   def value
     raise NotImplementedError
@@ -77,6 +79,9 @@ class DotGroupToken < Token
 end
 
 class Tokenizer
+  class TokenizerError < ApplicationError; end
+  class UnexpectedCharacterError < TokenizerError; end
+
   def tokenize(text)
     stack = []
 
@@ -118,7 +123,7 @@ class Tokenizer
       when /\s/
         stack << SpaceToken.new
       else
-        raise "Unknown character: #{char}"
+        raise UnexpectedCharacterError, "Unexpected character: #{char}"
       end
     end
 

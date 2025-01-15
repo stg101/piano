@@ -1,7 +1,12 @@
 require_relative "user_command"
+require_relative "../errors"
 
 # This looks kind of useless because is a small project.
 class UserCommandFactory
+  class UserCommandFactoryError < ApplicationError; end
+  class UnexpectedCommandError < UserCommandFactoryError; end
+  class BadArgumentError < UserCommandFactoryError; end
+
   attr_reader :audio_tree
 
   def initialize(audio_tree)
@@ -28,12 +33,17 @@ class UserCommandFactory
       make_set_option_command(args_str)
     when "null"
       make_null_command
-    else
+    when ""
       NullCommand.new
+    else
+      raise UnexpectedCommandError, "#{command}"
     end
   end
 
   def make_expr_command(args_str)
+    if args_str.nil? || args_str.empty?
+      raise BadArgumentError, "expr command requires an expression argument"
+    end
     ExprCommand.new(audio_tree, args_str)
   end
 
@@ -55,6 +65,10 @@ class UserCommandFactory
 
   def make_set_option_command(args_str)
     setting, value = args_str.split(" ", 2)
+
+    if setting.nil? || value.nil?
+      raise BadArgumentError, "set_option command requires a setting and value argument"
+    end
 
     case setting
     when "bpm"

@@ -1,5 +1,6 @@
 require_relative "tokenizer"
 require_relative "../component"
+require_relative "../errors"
 
 class Expr
   def build
@@ -83,6 +84,9 @@ class RepetitionExpr < Expr
 end
 
 class Interpreter
+  class InterpreterError < ApplicationError; end
+  class SyntaxError < InterpreterError; end
+
   attr_reader :tokenizer
 
   def initialize
@@ -113,7 +117,7 @@ class Interpreter
             last_pitch.octave + token.value
           ))
         else
-          raise "QuoteGroup should be after a pitch"
+          raise SyntaxError, "QuoteGroup should be after a pitch"
         end
       when CloseParenthesisToken
         args = []
@@ -150,7 +154,7 @@ class Interpreter
         elsif last_expr.is_a?(ChordExpr)
           stack.last.duration = Duration.new(token.value.to_f)
         elsif last_expr.is_a?(CrossToken) && stack[-2].is_a?(Expr)
-          raise "Not enough args for repetition" if stack.length <= 1
+          raise SyntaxError, "Not enough args for repetition" if stack.length <= 1
           stack.pop
           last_expr = stack.pop
           stack << RepetitionExpr.new(last_expr, token.value)
@@ -158,19 +162,25 @@ class Interpreter
       end
     end
 
+    if stack.length > 1
+      raise SyntaxError, "Bad expression"
+    end
+
     stack.pop
   end
 end
 
 # interpreter = Interpreter.new
-# # parsed = interpreter.interpret("(<c d4>2 c'x20 c'')")
-# parsed = interpreter.interpret("(<c a4>2 c'20x4 c'')")
+# # # parsed = interpreter.interpret("(<c d4>2 c'x20 c'')")
+# # parsed = interpreter.interpret("(<c a4>2 c'20x4 c'')")
+# parsed = interpreter.interpret("(<c a4>2 c'20x4 c''")
 
-# # parsed = interpreter.interpret("(<c2 d4>)")
+
+# # # parsed = interpreter.interpret("(<c2 d4>)")
 
 # pp parsed
 # composite = parsed.build
 # pp(composite)
 
-# composite.play
-# # test irregular chord
+# # composite.play
+# # # test irregular chord

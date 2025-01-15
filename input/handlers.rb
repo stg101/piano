@@ -1,5 +1,8 @@
 require_relative "../states/audio_tree"
 require_relative "../commands/user_command_factory"
+require_relative "../interpreter/interpreter"
+require_relative "../interpreter/tokenizer"
+require_relative "../errors"
 
 module EventType
   READ_EVENT = 0x01
@@ -83,10 +86,23 @@ class PianoHandler < Handler
     end
 
     payload_body = payload[0]
-    puts "payload: #{payload_body}"
 
-    command = command_factory.make_command(payload_body)
-    command.execute
+    begin
+      command = command_factory.make_command(payload_body)
+      command.execute
+    rescue Tokenizer::TokenizerError => e
+      socket.write("TokenizerError: #{e.message}\n")
+    rescue Interpreter::SyntaxError => e
+      socket.write("SyntaxError: #{e.message}\n")
+    rescue Interpreter::InterpreterError => e
+      socket.write("InterpreterError: #{e.message}\n")
+    rescue UserCommandFactory::UnexpectedCommandError => e
+      socket.write("Unknown command: #{e.message}\n")
+    rescue UserCommandFactory::BadArgumentError => e
+      socket.write("Bad argument: #{e.message}\n")
+    rescue StandardError => e
+      socket.write(e.message)
+    end
   end
 
   def get_handle
