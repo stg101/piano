@@ -18,7 +18,7 @@ class Server
 
   def run
     begin
-      AcceptHandler.new(Addrinfo.tcp("127.0.0.1", 5000), reactor)
+      AcceptHandler.new(Addrinfo.tcp("127.0.0.1", 3000), reactor)
 
       while true
         reactor.handle_events
